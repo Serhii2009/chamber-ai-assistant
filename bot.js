@@ -476,3 +476,129 @@ if (process.env.KEEP_ALIVE_URL) {
     }
   }, 15 * 60 * 1000) // Кожні 15 хвилин
 }
+
+console.log("Telegram bot з пам'яттю та Google Sheets запущено!")
+
+// function getUserMemory(userId) {
+//   if (!userMemory.has(userId)) {
+//     userMemory.set(userId, [])
+//   }
+//   return userMemory.get(userId)
+// }
+
+// function addToMemory(userId, role, content) {
+//   const memory = getUserMemory(userId)
+//   memory.push({ role, content })
+
+//   if (memory.length > MEMORY_LIMIT * 2) {
+//     memory.splice(0, 2)
+//   }
+
+//   userMemory.set(userId, memory)
+// }
+
+// function formatDate(timestamp) {
+//   const date = new Date((timestamp + 3 * 3600) * 1000)
+//   const day = String(date.getDate()).padStart(2, '0')
+//   const month = String(date.getMonth() + 1).padStart(2, '0')
+//   const year = date.getFullYear()
+//   const hours = String(date.getHours()).padStart(2, '0')
+//   const minutes = String(date.getMinutes()).padStart(2, '0')
+
+//   return `${day}/${month}/${year} (${hours}:${minutes})`
+// }
+
+// async function writeToGoogleSheets(userData) {
+//   try {
+//     const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID)
+
+//     // OAuth2 аутентифікація
+//     await doc.useOAuth2Client({
+//       client_id: process.env.GOOGLE_CLIENT_ID,
+//       client_secret: process.env.GOOGLE_CLIENT_SECRET,
+//       redirect_uri: 'urn:ietf:wg:oauth:2.0:oob',
+//     })
+
+//     await doc.loadInfo()
+//     const sheet = doc.sheetsByTitle['Users'] || doc.sheetsByIndex[0]
+
+//     await sheet.addRow({
+//       username: userData.username || '',
+//       text: userData.text || '',
+//       date: userData.date || '',
+//       first_name: userData.first_name || '',
+//       last_name: userData.last_name || '',
+//     })
+
+//     console.log('Дані успішно записано в Google Sheets')
+//   } catch (error) {
+//     console.error('Помилка при записі в Google Sheets:', error)
+//   }
+// }
+
+// async function getAIResponse(userId, userMessage) {
+//   try {
+//     const memory = getUserMemory(userId)
+//     const messages = [
+//       { role: 'system', content: systemPrompt },
+//       ...memory,
+//       { role: 'user', content: userMessage },
+//     ]
+
+//     const response = await axios.post(
+//       'https://openrouter.ai/api/v1/chat/completions',
+//       {
+//         model: 'openai/gpt-4.1',
+//         messages: messages,
+//       },
+//       {
+//         headers: {
+//           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+//           'Content-Type': 'application/json',
+//         },
+//       }
+//     )
+
+//     const aiReply = response.data.choices[0].message.content
+
+//     addToMemory(userId, 'user', userMessage)
+//     addToMemory(userId, 'assistant', aiReply)
+
+//     return aiReply
+//   } catch (error) {
+//     console.error('Помилка при отриманні відповіді від AI:', error)
+//     throw error
+//   }
+// }
+
+// // Основний обробник повідомлень
+// bot.on('message', async (msg) => {
+//   const chatId = msg.chat.id
+//   const userId = msg.from.id
+//   const userMessage = msg.text
+
+//   if (!userMessage) return
+
+//   try {
+//     const userData = {
+//       username: msg.from.username || '',
+//       text: userMessage,
+//       date: formatDate(msg.date),
+//       first_name: msg.from.first_name || '',
+//       last_name: msg.from.last_name || '',
+//     }
+
+//     await writeToGoogleSheets(userData)
+//     const aiReply = await getAIResponse(userId, userMessage)
+
+//     await bot.sendMessage(chatId, aiReply, {
+//       parse_mode: 'Markdown',
+//       disable_web_page_preview: true,
+//     })
+//   } catch (error) {
+//     console.error('Помилка:', error.response?.data || error.message)
+//     await bot.sendMessage(chatId, 'Вибач, виникла помилка. Спробуй пізніше.')
+//   }
+// })
+
+// console.log('Telegram bot з OAuth2 запущено!')
