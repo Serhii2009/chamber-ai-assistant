@@ -6,6 +6,12 @@ const { JWT } = require('google-auth-library')
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true })
 
+// Додати на початок bot.js після створення bot
+bot
+  .deleteWebHook()
+  .then(() => console.log('Webhook deleted successfully'))
+  .catch((err) => console.log('No webhook to delete or error:', err.message))
+
 // Система пам'яті для зберігання історії розмов
 const userMemory = new Map()
 const MEMORY_LIMIT = 10 // Максимальна кількість повідомлень в пам'яті
