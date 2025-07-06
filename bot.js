@@ -3,18 +3,18 @@ const TelegramBot = require('node-telegram-bot-api')
 const axios = require('axios')
 const { GoogleSpreadsheet } = require('google-spreadsheet')
 const { JWT } = require('google-auth-library')
+const express = require('express')
 
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true })
+// HTTP сервер для Render
+const app = express()
+const PORT = process.env.PORT || 3000
 
-// Додати на початок bot.js після створення bot
-bot
-  .deleteWebHook()
-  .then(() => console.log('Webhook deleted successfully'))
-  .catch((err) => console.log('No webhook to delete or error:', err.message))
+// Створюємо бота без polling спочатку
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false })
 
 // Система пам'яті для зберігання історії розмов
 const userMemory = new Map()
-const MEMORY_LIMIT = 10 // Максимальна кількість повідомлень в пам'яті
+const MEMORY_LIMIT = 10
 
 const systemPrompt = `You are the AI Assistant for the Chamber Toastmasters Club — an English-speaking club based in Kyiv, Ukraine — and part of Toastmasters International, the world's leading organization devoted to public speaking and leadership development.
 
@@ -345,10 +345,8 @@ function addToMemory(userId, role, content) {
   const memory = getUserMemory(userId)
   memory.push({ role, content })
 
-  // Обмеження пам'яті
   if (memory.length > MEMORY_LIMIT * 2) {
-    // *2 тому що кожен обмін включає user + assistant
-    memory.splice(0, 2) // Видаляємо найстарші повідомлення
+    memory.splice(0, 2)
   }
 
   userMemory.set(userId, memory)
@@ -356,7 +354,7 @@ function addToMemory(userId, role, content) {
 
 // Функція для форматування дати
 function formatDate(timestamp) {
-  const date = new Date((timestamp + 3 * 3600) * 1000) // UTC+3
+  const date = new Date((timestamp + 3 * 3600) * 1000)
   const day = String(date.getDate()).padStart(2, '0')
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const year = date.getFullYear()
@@ -369,7 +367,6 @@ function formatDate(timestamp) {
 // Функція для запису в Google Sheets
 async function writeToGoogleSheets(userData) {
   try {
-    // Налаштування Google Sheets з service account
     const serviceAccountAuth = new JWT({
       email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
       key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
@@ -424,7 +421,6 @@ async function getAIResponse(userId, userMessage) {
 
     const aiReply = response.data.choices[0].message.content
 
-    // Додаємо повідомлення в пам'ять
     addToMemory(userId, 'user', userMessage)
     addToMemory(userId, 'assistant', aiReply)
 
@@ -441,11 +437,11 @@ bot.on('message', async (msg) => {
   const userId = msg.from.id
   const userMessage = msg.text
 
-  // Ігноруємо не-текстові повідомлення
   if (!userMessage) return
 
+  console.log(`Отримано повідомлення від ${userId}: ${userMessage}`)
+
   try {
-    // Підготовка даних для Google Sheets
     const userData = {
       username: msg.from.username || '',
       text: userMessage,
@@ -454,27 +450,58 @@ bot.on('message', async (msg) => {
       last_name: msg.from.last_name || '',
     }
 
-    // Записуємо в Google Sheets
     await writeToGoogleSheets(userData)
-
-    // Отримуємо відповідь від AI з пам'яттю
     const aiReply = await getAIResponse(userId, userMessage)
 
-    // Відправляємо відповідь
     await bot.sendMessage(chatId, aiReply, {
       parse_mode: 'Markdown',
       disable_web_page_preview: true,
     })
+
+    console.log(`Відповідь надіслана користувачу ${userId}`)
   } catch (error) {
     console.error('Помилка:', error.response?.data || error.message)
     await bot.sendMessage(chatId, 'Вибач, виникла помилка. Спробуй пізніше.')
   }
 })
 
-// HTTP сервер для Render
-const express = require('express')
-const app = express()
-const PORT = process.env.PORT || 3000
+// Функція для ініціалізації бота
+async function initializeBot() {
+  try {
+    // Видаляємо webhook якщо він існує
+    await bot.deleteWebHook()
+    console.log('Webhook видалено')
+
+    // Чекаємо трохи
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Запускаємо polling
+    await bot.startPolling()
+    console.log('Polling запущено')
+
+    // Перевіряємо статус бота
+    const me = await bot.getMe()
+    console.log('Бот запущено:', me.username)
+
+    return true
+  } catch (error) {
+    console.error('Помилка ініціалізації бота:', error)
+    return false
+  }
+}
+
+// Функція для перезапуску бота
+async function restartBot() {
+  try {
+    console.log('Перезапуск бота...')
+    await bot.stopPolling()
+    await new Promise((resolve) => setTimeout(resolve, 3000))
+    await initializeBot()
+    console.log('Бот перезапущено')
+  } catch (error) {
+    console.error('Помилка перезапуску бота:', error)
+  }
+}
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -482,31 +509,99 @@ app.get('/', (req, res) => {
     status: 'OK',
     message: 'Telegram bot is running',
     timestamp: new Date().toISOString(),
+    botStatus: bot.isPolling() ? 'polling' : 'stopped',
   })
 })
 
-// Endpoint для статистики (опціонально)
+// Endpoint для пробудження бота
+app.get('/wake', async (req, res) => {
+  try {
+    console.log('Wake endpoint викликано')
+
+    // Перевіряємо чи працює polling
+    if (!bot.isPolling()) {
+      console.log('Бот не працює, запускаємо...')
+      await initializeBot()
+    }
+
+    // Надсилаємо тестове повідомлення самому собі
+    try {
+      await bot.getMe()
+      console.log('Бот активний')
+    } catch (error) {
+      console.log('Бот не відповідає, перезапускаємо...')
+      await restartBot()
+    }
+
+    res.json({
+      status: 'OK',
+      message: 'Bot is awake',
+      timestamp: new Date().toISOString(),
+      botStatus: bot.isPolling() ? 'polling' : 'stopped',
+    })
+  } catch (error) {
+    console.error('Помилка wake endpoint:', error)
+    res.status(500).json({
+      status: 'ERROR',
+      message: error.message,
+      timestamp: new Date().toISOString(),
+    })
+  }
+})
+
+// Endpoint для статистики
 app.get('/stats', (req, res) => {
   res.json({
     totalUsers: userMemory.size,
     uptime: process.uptime(),
     memoryUsage: process.memoryUsage(),
+    botStatus: bot.isPolling() ? 'polling' : 'stopped',
   })
 })
 
 // Запуск сервера
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`HTTP server running on port ${PORT}`)
+
+  // Ініціалізуємо бота після запуску сервера
+  await initializeBot()
 })
 
-// Keep-alive функція (оновлена для Render)
+// Покращений keep-alive механізм
 if (process.env.RENDER_EXTERNAL_URL) {
   setInterval(async () => {
     try {
-      await axios.get(process.env.RENDER_EXTERNAL_URL)
-      console.log('Keep-alive ping sent')
+      // Пінгуємо wake endpoint замість головної сторінки
+      const wakeUrl = `${process.env.RENDER_EXTERNAL_URL}/wake`
+      const response = await axios.get(wakeUrl, { timeout: 30000 })
+      console.log('Keep-alive ping успішний:', response.data.botStatus)
     } catch (error) {
       console.error('Keep-alive ping failed:', error.message)
+      // Спробуємо перезапустити бота
+      await restartBot()
     }
-  }, 15 * 60 * 1000) // Кожні 15 хвилин
+  }, 14 * 60 * 1000) // Кожні 14 хвилин (до засинання)
 }
+
+// Обробка помилок
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason)
+})
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error)
+  process.exit(1)
+})
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully')
+  await bot.stopPolling()
+  process.exit(0)
+})
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully')
+  await bot.stopPolling()
+  process.exit(0)
+})
