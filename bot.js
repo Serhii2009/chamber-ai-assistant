@@ -488,7 +488,6 @@ async function restartBot() {
   }
 }
 
-// Health check endpoint
 app.get('/', (req, res) => {
   res.json({
     status: 'OK',
@@ -549,7 +548,6 @@ app.listen(PORT, async () => {
 if (process.env.RENDER_EXTERNAL_URL) {
   setInterval(async () => {
     try {
-      // Пінгуємо wake endpoint замість головної сторінки
       const wakeUrl = `${process.env.RENDER_EXTERNAL_URL}/wake`
       const response = await axios.get(wakeUrl, { timeout: 30000 })
       console.log('Keep-alive ping успішний:', response.data.botStatus)
