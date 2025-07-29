@@ -5,14 +5,11 @@ const { GoogleSpreadsheet } = require('google-spreadsheet')
 const { JWT } = require('google-auth-library')
 const express = require('express')
 
-// HTTP сервер для Render
 const app = express()
 const PORT = process.env.PORT || 3000
 
-// Створюємо бота без polling спочатку
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false })
 
-// Система пам'яті для зберігання історії розмов
 const userMemory = new Map()
 const MEMORY_LIMIT = 10
 
@@ -332,7 +329,6 @@ End of prompt.
 - 1st & 3rd Wednesday, 19:15 Kyiv time - Meetings
 - https://t.me/ChamberToastmastersKyivEnglish - Telegram`
 
-// Функція для отримання пам'яті користувача
 function getUserMemory(userId) {
   if (!userMemory.has(userId)) {
     userMemory.set(userId, [])
@@ -340,7 +336,6 @@ function getUserMemory(userId) {
   return userMemory.get(userId)
 }
 
-// Функція для додавання повідомлення в пам'ять
 function addToMemory(userId, role, content) {
   const memory = getUserMemory(userId)
   memory.push({ role, content })
@@ -352,7 +347,6 @@ function addToMemory(userId, role, content) {
   userMemory.set(userId, memory)
 }
 
-// Функція для форматування дати
 function formatDate(timestamp) {
   const date = new Date((timestamp + 3 * 3600) * 1000)
   const day = String(date.getDate()).padStart(2, '0')
@@ -364,7 +358,6 @@ function formatDate(timestamp) {
   return `${day}/${month}/${year} (${hours}:${minutes})`
 }
 
-// Функція для запису в Google Sheets
 async function writeToGoogleSheets(userData) {
   try {
     const serviceAccountAuth = new JWT({
@@ -395,7 +388,6 @@ async function writeToGoogleSheets(userData) {
   }
 }
 
-// Функція для отримання відповіді від AI
 async function getAIResponse(userId, userMessage) {
   try {
     const memory = getUserMemory(userId)
@@ -431,7 +423,6 @@ async function getAIResponse(userId, userMessage) {
   }
 }
 
-// Основний обробник повідомлень
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id
   const userId = msg.from.id
@@ -465,21 +456,16 @@ bot.on('message', async (msg) => {
   }
 })
 
-// Функція для ініціалізації бота
 async function initializeBot() {
   try {
-    // Видаляємо webhook якщо він існує
     await bot.deleteWebHook()
     console.log('Webhook видалено')
 
-    // Чекаємо трохи
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    // Запускаємо polling
     await bot.startPolling()
     console.log('Polling запущено')
 
-    // Перевіряємо статус бота
     const me = await bot.getMe()
     console.log('Бот запущено:', me.username)
 
@@ -490,7 +476,6 @@ async function initializeBot() {
   }
 }
 
-// Функція для перезапуску бота
 async function restartBot() {
   try {
     console.log('Перезапуск бота...')
@@ -513,18 +498,15 @@ app.get('/', (req, res) => {
   })
 })
 
-// Endpoint для пробудження бота
 app.get('/wake', async (req, res) => {
   try {
     console.log('Wake endpoint викликано')
 
-    // Перевіряємо чи працює polling
     if (!bot.isPolling()) {
       console.log('Бот не працює, запускаємо...')
       await initializeBot()
     }
 
-    // Надсилаємо тестове повідомлення самому собі
     try {
       await bot.getMe()
       console.log('Бот активний')
@@ -549,7 +531,6 @@ app.get('/wake', async (req, res) => {
   }
 })
 
-// Endpoint для статистики
 app.get('/stats', (req, res) => {
   res.json({
     totalUsers: userMemory.size,
@@ -559,15 +540,12 @@ app.get('/stats', (req, res) => {
   })
 })
 
-// Запуск сервера
 app.listen(PORT, async () => {
   console.log(`HTTP server running on port ${PORT}`)
 
-  // Ініціалізуємо бота після запуску сервера
   await initializeBot()
 })
 
-// Покращений keep-alive механізм
 if (process.env.RENDER_EXTERNAL_URL) {
   setInterval(async () => {
     try {
@@ -577,13 +555,11 @@ if (process.env.RENDER_EXTERNAL_URL) {
       console.log('Keep-alive ping успішний:', response.data.botStatus)
     } catch (error) {
       console.error('Keep-alive ping failed:', error.message)
-      // Спробуємо перезапустити бота
       await restartBot()
     }
-  }, 14 * 60 * 1000) // Кожні 14 хвилин (до засинання)
+  }, 14 * 60 * 1000)
 }
 
-// Обробка помилок
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason)
 })
@@ -593,7 +569,6 @@ process.on('uncaughtException', (error) => {
   process.exit(1)
 })
 
-// Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully')
   await bot.stopPolling()
