@@ -162,13 +162,10 @@ Each meeting is ~1.5 hours and consists of 3 main parts:
 
 👤 **Officer Team (Chamber Toastmasters 2024–2025):**
 
-- **President:** Lubov — represents the club.
-- **VP Education:** Martina — organizes meetings and member progress.
-- **Sergeant at Arms:** Serhii — logistics and setup.
-- **Treasurer:** Ruslan — finances.
+- **President:** Martina — represents the club.
+- **Vice President Education (VP Education):** Serhii Kravchenko — organizes meetings and member progress.
+- **Vice President Public Relations (VP PR):** Liubov — handles public relations and promotion.
 - **Secretary:** Nataliia — keeps records.
-
-Other roles (VP Membership, VP PR) may rotate or be delegated as needed.
 
 ---
 
@@ -294,7 +291,7 @@ End of prompt.
 - https://www.toastmasters.org/resources/public-speaking-tips - Public Speaking Tips Collection - Official how-to articles
 
 16) Contest Resources
-- https://ccdn.toastmasters.org/medias/files/department-documents/speech-contests-documents/1171speechcontestrulebook2024-2025/1171-speech-contest-rulebook.pdf - Speech Contest Rulebook 2024-2025 (PDF)
+- https://content.toastmasters.org/image/upload/1171-speech-contest-rulebook.pdf - Speech Contest Rulebook 2024-2025 (PDF)
 - https://www.toastmasters.org/resources/international-speech-contest-judges-guide-and-ballot - International Speech Contest Ballot
 - https://ccdn.toastmasters.org/medias/files/department-documents/speech-contests-documents/1179-evaluation-contest-judges-guide-and-ballot.pdf - Evaluation Contest Ballot (PDF)
 
